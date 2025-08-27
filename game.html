@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebel Explorer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23000"/%3E%3C/svg%3E'); /* Simple black background */
+            z-index: -1;
+        }
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            animation: stars-flow 10s linear infinite;
+        }
+        @keyframes stars-flow {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+        #planet {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #ffcc00, #ff6600);
+            border-radius: 50%;
+            animation: planet-rotate 20s linear infinite;
+            opacity: 0.3;
+        }
+        @keyframes planet-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+        }
+        #story {
+            margin: 100px auto;
+            width: 80%;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #fff;
+            min-height: 200px;
+        }
+        #choices {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <div id="planet"></div>
+    <div id="status">Resources: 0 | Clues: 0 | Scene: 1/5 | Dice: -</div>
+    <div id="story"></div>
+    <div id="choices"></div>
+
+    <script>
+        // Game State
+        let resources = 0;
+        let clues = 0;
+        let scene = 1;
+        let maxScenes = 5;
+        let diceResult = '-';
+
+        // Arrays for random elements
+        const climates = ['scorching', 'freezing', 'stormy', 'fog-shrouded'];
+        const discoveries = ['ancient artifact', 'rare ore', 'enemy trace', 'sign of life'];
+        const secrets = ['lost technology', 'encrypted message', 'ancient map', 'unknown energy source'];
+        const creatures = ['venomous reptile', 'intelligent alien', 'giant insect', 'parasitic entity'];
+        const troubles = ['tectonic shift', 'enemy sabotage', 'mechanical failure', 'anomalous weather'];
+
+        // Story Templates
+        const templates = [
+            // Environment Survey
+            (climate, discovery) => `You have landed on a ${climate} planet. Surveying the surroundings, you find a ${discovery}.`,
+            // Ancient Ruins Discovery
+            (discovery, secret) => `Near the ${discovery}, an ancient ruin appears. Exploring inside, a ${secret} is revealed.`,
+            // Dangerous Creature Encounter
+            (climate, discovery, creature) => `In the ${climate} environment, while pursuing the ${discovery}, a ${creature} appears.`,
+            // Resource Mining Trouble
+            (discovery, trouble) => `While mining resources from the ${discovery}, a ${trouble} occurs.`
+        ];
+
+        // Function to get random element from array
+        function randomFrom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // Function to generate story for current scene
+        function generateStory() {
+            const templateIndex = Math.floor(Math.random() * templates.length);
+            let storyText = '';
+            switch (templateIndex) {
+                case 0:
+                    storyText = templates[0](randomFrom(climates), randomFrom(discoveries));
+                    break;
+                case 1:
+                    storyText = templates[1](randomFrom(discoveries), randomFrom(secrets));
+                    break;
+                case 2:
+                    storyText = templates[2](randomFrom(climates), randomFrom(discoveries), randomFrom(creatures));
+                    break;
+                case 3:
+                    storyText = templates[3](randomFrom(discoveries), randomFrom(troubles));
+                    break;
+            }
+            document.getElementById('story').innerHTML = storyText + '<br><br>Choose your action:';
+            showChoices();
+        }
+
+        // Function to show action choices
+        function showChoices() {
+            const choicesDiv = document.getElementById('choices');
+            choicesDiv.innerHTML = '';
+            const actions = ['Combat', 'Explore', 'Negotiate'];
+            actions.forEach(action => {
+                const btn = document.createElement('button');
+                btn.textContent = action;
+                btn.onclick = () => handleAction(action.toLowerCase());
+                choicesDiv.appendChild(btn);
+            });
+        }
+
+        // Function to handle player action
+        function handleAction(action) {
+            // Roll D6
+            const roll = Math.floor(Math.random() * 6) + 1;
+            diceResult = roll;
+            updateStatus();
+
+            let resultText = `<br>Dice roll: ${roll}. `;
+            if (roll >= 4) {
+                resultText += 'Success! ';
+                if (action === 'explore' || scene % 2 === 0) { // Simple condition for resource/mining related
+                    const gain = roll;
+                    resources += gain;
+                    resultText += `Gained ${gain} resources.`;
+                }
+                if (action === 'explore' || action === 'negotiate') {
+                    clues += 1;
+                    resultText += ` Gained a clue.`;
+                }
+            } else {
+                resultText += 'Failure. No gain.';
+            }
+
+            document.getElementById('story').innerHTML += resultText;
+            document.getElementById('choices').innerHTML = '';
+
+            // Proceed to next scene after short delay
+            setTimeout(() => {
+                scene++;
+                if (scene > maxScenes) {
+                    endGame();
+                } else {
+                    updateStatus();
+                    generateStory();
+                }
+            }, 2000);
+        }
+
+        // Function to update status
+        function updateStatus() {
+            document.getElementById('status').textContent = `Resources: ${resources} | Clues: ${clues} | Scene: ${scene}/${maxScenes} | Dice: ${diceResult}`;
+        }
+
+        // Function to end game
+        function endGame() {
+            let endMessage = '';
+            if (resources >= 10 || clues >= 3) {
+                endMessage = 'You have grasped the hope of rebellion!';
+            } else {
+                endMessage = 'Swallowed by the shadow of the empire...';
+            }
+            document.getElementById('story').innerHTML = endMessage;
+            document.getElementById('choices').innerHTML = '<button onclick="location.reload()">Replay</button>';
+        }
+
+        // Initialize game
+        function init() {
+            // Create stars for animation
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = star.style.height = Math.random() * 2 + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 5 + 's';
+                document.getElementById('background').appendChild(star);
+            }
+
+            // Intro narrative
+            document.getElementById('story').innerHTML = 'You are a rebel warrior infiltrating an unknown planet to escape the Galactic Empire\'s rule. Secure resources and unravel lost secrets to turn the tide of rebellion...';
+            setTimeout(generateStory, 3000); // Start after intro
+            updateStatus();
+        }
+
+        init();
+    </script>
+</body>
+</html>
